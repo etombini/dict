@@ -26,10 +26,13 @@
         struct slist_dict_ ## type ## _item * sld;                                                      \
         unsigned int size;                                                                              \
                                                                                                         \
-        void (*set)(dict_ ## type *, char *, type *);                                                   \
-        void (*unset)(dict_ ## type *, char *);                                                         \
+        /* returns any previous value associated with this key, NULL otherwise */                       \
+        type * (*set)(dict_ ## type *, char *, type *);                                                 \
+        /* returns the value associated with this key, NULL if the key does not exist */                \
+        type * (*unset)(dict_ ## type *, char *);                                                       \
+        /* returns the value associated with this key, NULL if the key does not exist */                \
         type * (*get_value)(dict_ ## type *, char *);                                                   \
-        type ** (*get_keys)(dict_ ## type *);                                                           \
+        char ** (*get_keys)(dict_ ## type *);                                                           \
         int (*cmp_item)(dict_ ## type ## _item *, dict_ ## type ## item *);                             \
     };                                                                                                  \
                                                                                                         \
@@ -37,18 +40,107 @@
     {                                                                                                   \
         return strcmp(v1->key, v2->key);                                                                \
     }                                                                                                   \
-
-
+                                                                                                        \
+    type * dict_ ## type ## _set(dict_ ## type * d, char * k, type * v)                                 \
+    {                                                                                                   \
+        struct slist_dict_ ## type ## _item_pos pos;                                                    \
+        struct dict_ ## type ## _item * dict_item;                                                      \
+                                                                                                        \
+        dict_item = malloc(sizeof(*dict_item));                                                         \
+        if(dict_item == NULL)                                                                           \
+        {                                                                                               \
+            fprintf(stderr, "Can not allocate memory for dict item\n");                                 \
+            exit(EXIT_FAILURE);                                                                         \
+        }                                                                                               \
+        dict_item->key = k;                                                                             \
+        dict_item->value = v;                                                                           \
+                                                                                                        \
+        pos = d->sld->is_in(d->sld, dict_item);                                                         \
+        if(pos.is_in == true)                                                                           \
+        {                                                                                               \
+            type * value;                                                                               \
+            value = pos.value->value;                                                                   \
+            pos.value->value = dict_item->value;                                                        \
+            free(dict_item);                                                                            \
+            return value;                                                                               \
+        }                                                                                               \
+        else                                                                                            \
+        {                                                                                               \
+            d->sld->insert(d->sld, dict_item);                                                          \
+            return NULL;                                                                                \
+        }                                                                                               \
+    }                                                                                                   \
+                                                                                                        \
+    type * dict_ ## type ## _unset(dict_ ## type * d, char * k)                                         \
+    {                                                                                                   \
+        struct slist_dict_ ## type ## _item_pos pos;                                                    \
+        struct dict_ ## type ## _item * dict_item;                                                      \
+        struct dict_ ## type ## _item * dict_item_to_delete;                                            \
+                                                                                                        \
+        dict_item = malloc(sizeof(*dict_item));                                                         \
+        if(dict_item == NULL)                                                                           \
+        {                                                                                               \
+            fprintf(stderr, "Can not allocate memory for dict item\n");                                 \
+            exit(EXIT_FAILURE);                                                                         \
+        }                                                                                               \
+        dict_item->key = k;                                                                             \
+        dict_item->value = NULL;                                                                        \
+                                                                                                        \
+        pos = d->sld->is_in(d->sld, dict_item);                                                         \
+        if(pos.is_in == true)                                                                           \
+        {                                                                                               \
+            type * value;                                                                               \
+            dict_item_to_delete = d->sld->remove_at(d->sld, pos.pos);                                   \
+            value = dict_item_to_delete->value;                                                         \
+            free(dict_item);                                                                            \
+            free(dict_item_to_delete);                                                                  \
+            return value;                                                                               \
+        }                                                                                               \
+        else                                                                                            \
+        {                                                                                               \
+            free(dict_item);                                                                            \
+            return NULL;                                                                                \
+        }                                                                                               \
+    }                                                                                                   \
+                                                                                                        \
+    type * dict_ ## type ## _get_value(dict_ ## type * d, char * k)                                     \
+    {                                                                                                   \
+        struct slist_dict_ ## type ## _item_pos pos;                                                    \
+        struct dict_ ## type ## _item * searched_item;                                                  \
+                                                                                                        \
+        searched_item = malloc(sizeof(*searched_item));                                                 \
+        if(searched_item == NULL)                                                                       \
+        {                                                                                               \
+            fprintf(stderr, "Can not allocate memory for dict item");                                   \
+            exit(EXIT_FAILURE);                                                                         \
+        }                                                                                               \
+        searched_item->key = k;                                                                         \
+        searched_item->value = NULL;                                                                    \
+                                                                                                        \
+        pos = d->sld->is_in(d->sld, searched_item);                                                     \
+        if(pos->is_in == true)                                                                          \
+        {                                                                                               \
+            type * value;                                                                               \
+            value = pos.value->value;                                                                   \
+            free(searched_item);                                                                        \
+            return value;                                                                               \
+        }                                                                                               \
+        else                                                                                            \
+        {                                                                                               \
+            free(searched_item);                                                                        \
+            return NULL;                                                                                \
+        }                                                                                               \
+    }
 
 #define dict_init(type, name)                                                                           \
     struct dict_ ## type * name;                                                                        \
     name = malloc(sizeof(*name));                                                                       \
     if(name == NULL)                                                                                    \
     {                                                                                                   \
-        fprintf(stderr, "Can not allocate memory for dictionary");                                      \
+        fprintf(stderr, "Can not allocate memory for dictionary\n");                                    \
         exit(EXIT_FAILURE);                                                                             \
     }                                                                                                   \
-    slist_init(type, name ## _slist, dict_ ## type ## _cmp_item);                                       \
+    slist_init(dict_ ## type ## _item, name ## _slist, dict_ ## type ## _cmp_item);                     \
     name->sld = name ## _slist;                                                                         \
     name->size = name->sld->size;                                                                       \
     name->set = &dict_ ## type ## _set;                                                                 \
