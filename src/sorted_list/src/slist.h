@@ -31,6 +31,7 @@
     struct slist_ ## type ## _pos {                                                                     \
         bool is_in;                                                                                     \
         unsigned int pos;                                                                               \
+        type * value;                                                                                   \
     };                                                                                                  \
                                                                                                         \
     void slist_ ## type ## _insert(struct slist_ ## type * l, type * value)                             \
@@ -205,6 +206,7 @@
                                                                                                         \
         pos.is_in = false;                                                                              \
         pos.pos = 0;                                                                                    \
+        pos.value = NULL;                                                                               \
                                                                                                         \
         if(l->root == NULL)                                                                             \
             return pos;                                                                                 \
@@ -241,6 +243,7 @@
         {                                                                                               \
             pos.is_in = true;                                                                           \
             pos.pos = i_sup;                                                                            \
+            pos.value = nodes[i_sup]->value;                                                            \
             return pos;                                                                                 \
         }                                                                                               \
         else                                                                                            \
