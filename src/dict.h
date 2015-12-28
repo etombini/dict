@@ -67,6 +67,7 @@
         else                                                                                            \
         {                                                                                               \
             d->sld->insert(d->sld, dict_item);                                                          \
+            d->size++;                                                                                  \
             return NULL;                                                                                \
         }                                                                                               \
     }                                                                                                   \
@@ -91,6 +92,7 @@
         {                                                                                               \
             type * value;                                                                               \
             dict_item_to_delete = d->sld->remove_at(d->sld, pos.pos);                                   \
+            d->size--;                                                                                  \
             value = dict_item_to_delete->value;                                                         \
             free(dict_item);                                                                            \
             free(dict_item_to_delete);                                                                  \
